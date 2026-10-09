@@ -98,7 +98,7 @@ function Tracking() {
         </div>
         <div className="relative order-1 h-[440px] overflow-hidden rounded-2xl border border-slate-800 shadow-md lg:order-2 lg:h-full">
           <FleetMap markers={markers} routes={routes} fitPoints={fitPoints} fitKey={selectedId ?? `all:${list.length}`} onMarkerClick={onMarker} />
-          <div className="absolute bottom-4 left-4 z-[500] space-y-1.5 rounded-xl border border-slate-800 bg-slate-950/90 px-3.5 py-2.5 backdrop-blur-md text-xs shadow-xl">
+          <div className="absolute bottom-4 left-4 z-10 space-y-1.5 rounded-xl border border-slate-800 bg-slate-950/90 px-3.5 py-2.5 backdrop-blur-md text-xs shadow-xl">
             {([['green', 'On route'], ['red', 'Delayed'], ['slate', 'Idle / offline'], ['amber', 'Maintenance']] as const).map(([t, l]) => <p key={l} className="flex items-center gap-2 font-bold text-slate-200"><span className="h-2.5 w-2.5 rounded-full shadow-2xs" style={{ background: TONE_HEX[t] }} />{l}</p>)}
           </div>
         </div>

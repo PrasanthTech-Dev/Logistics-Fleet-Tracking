@@ -97,6 +97,7 @@ export default function AppLayout() {
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [modalType, setModalType] = useState<'shipment' | 'vehicle' | 'driver' | null>(null);
 
+  const contentRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const quickRef = useRef<HTMLDivElement>(null);
@@ -112,7 +113,7 @@ export default function AppLayout() {
   const meta = Object.entries(PAGE_META).find(([key]) => key === '/' ? pathname === '/' : pathname.startsWith(key))?.[1] ?? PAGE_META['/'];
 
   useEffect(() => { if (status === 'idle') void load(); }, [status, load]);
-  useEffect(() => { setDrawer(false); window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => { setDrawer(false); contentRef.current?.scrollTo(0, 0); }, [pathname]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -239,18 +240,18 @@ export default function AppLayout() {
   );
 
   return (
-    <div className="min-h-screen lg:pl-64">
+    <div className="flex h-screen w-full overflow-hidden bg-[#080d1a]">
       {/* Sidebar Desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-800/80 bg-slate-900 px-4 py-5 lg:flex">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-slate-800/80 bg-slate-900 px-4 py-5 h-full overflow-y-auto">
         <div className="mb-8 px-2"><Brand /></div>
         <NavList />
       </aside>
 
       {/* Sidebar Mobile Drawer */}
       {drawer && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-[100] lg:hidden">
           <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs" onClick={() => setDrawer(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-slate-800 bg-slate-900 px-4 py-5">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-slate-800 bg-slate-900 px-4 py-5 overflow-y-auto">
             <div className="mb-8 flex items-center justify-between px-2">
               <Brand />
               <button aria-label="Close menu" onClick={() => setDrawer(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"><X className="h-5 w-5" /></button>
@@ -260,29 +261,109 @@ export default function AppLayout() {
         </div>
       )}
 
-      {/* Sticky Top Header Navbar */}
-      <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-[#080d1a]/90 backdrop-blur-md">
-        {/* Top Navbar Row */}
-        <div className="relative flex h-16 items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-3.5 z-10">
-            <button
-              aria-label="Open menu"
-              onClick={() => setDrawer(true)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <h1 className="hidden sm:block font-display text-2xl font-extrabold tracking-tight text-white leading-tight">{meta.title}</h1>
+      {/* Main Content Layout (Header + Slide/Content Area) */}
+      <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        {/* Top Header Navbar */}
+        <header className="shrink-0 z-20 border-b border-slate-800/80 bg-[#080d1a]/90 backdrop-blur-md">
+          {/* Top Navbar Row */}
+          <div className="relative flex h-16 items-center justify-between px-4 lg:px-8">
+            <div className="flex items-center gap-3.5 z-10">
+              <button
+                aria-label="Open menu"
+                onClick={() => setDrawer(true)}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white lg:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <h1 className="hidden sm:block font-display text-2xl font-extrabold tracking-tight text-white leading-tight">{meta.title}</h1>
+            </div>
+
+            {/* Mobile Centered Title */}
+            <div className="absolute inset-x-0 flex justify-center pointer-events-none sm:hidden">
+              <h1 className="font-display text-xl font-extrabold tracking-tight text-white leading-tight">{meta.title}</h1>
+            </div>
+
+            <div className="flex items-center gap-3 sm:gap-3.5 shrink-0 z-10">
+              {/* Desktop Search Bar */}
+              <div ref={searchRef} className="relative hidden sm:flex items-center">
+                <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => setSearchOpen(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchOpen(true);
+                  }}
+                  placeholder="Search for something"
+                  className="w-48 md:w-72 rounded-full border border-slate-800/90 bg-[#121929] py-2 pl-10 pr-8 text-sm font-normal text-slate-100 placeholder-slate-400/90 transition-all duration-200 focus:border-cyan-500/50 focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-cyan-500/30"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
+                    className="absolute right-3 text-slate-400 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
+                {searchOpen && searchQuery.trim() !== '' && searchResultsDropdown}
+              </div>
+
+              {/* Quick Action Button & Dropdown */}
+              <div ref={quickRef} className="relative hidden sm:block">
+                <button
+                  onClick={() => setQuickActionOpen((prev) => !prev)}
+                  className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-500 active:scale-95 transition-all duration-150"
+                >
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                  <span>Quick Action</span>
+                </button>
+
+                {quickActionOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-slate-800 bg-[#0e1626]/95 p-1.5 shadow-2xl backdrop-blur-md z-50">
+                    <button
+                      onClick={() => {
+                        setQuickActionOpen(false);
+                        setModalType('shipment');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-100 hover:bg-slate-800/70 transition-colors"
+                    >
+                      <Package className="h-4 w-4 text-blue-400" />
+                      <span>New Shipment</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setQuickActionOpen(false);
+                        setModalType('vehicle');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-100 hover:bg-slate-800/70 transition-colors"
+                    >
+                      <Truck className="h-4 w-4 text-emerald-400" />
+                      <span>Add Vehicle</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setQuickActionOpen(false);
+                        setModalType('driver');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-100 hover:bg-slate-800/70 transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4 text-amber-400" />
+                      <span>Add Driver</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <NotificationBell />
+            </div>
           </div>
 
-          {/* Mobile Centered Title */}
-          <div className="absolute inset-x-0 flex justify-center pointer-events-none sm:hidden">
-            <h1 className="font-display text-xl font-extrabold tracking-tight text-white leading-tight">{meta.title}</h1>
-          </div>
-
-          <div className="flex items-center gap-3 sm:gap-3.5 shrink-0 z-10">
-            {/* Desktop Search Bar */}
-            <div ref={searchRef} className="relative hidden sm:flex items-center">
+          {/* Mobile Search Bar Row (Shown on mobile screens < sm) */}
+          <div className="block sm:hidden border-t border-slate-800/60 px-4 py-2.5 bg-[#090e1b]">
+            <div ref={mobileSearchRef} className="relative flex items-center">
               <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
@@ -293,7 +374,7 @@ export default function AppLayout() {
                   setSearchOpen(true);
                 }}
                 placeholder="Search for something"
-                className="w-48 md:w-72 rounded-full border border-slate-800/90 bg-[#121929] py-2 pl-10 pr-8 text-sm font-normal text-slate-100 placeholder-slate-400/90 transition-all duration-200 focus:border-cyan-500/50 focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-cyan-500/30"
+                className="w-full rounded-full border border-slate-800/90 bg-[#121929] py-2 pl-10 pr-8 text-sm font-normal text-slate-100 placeholder-slate-400/90 transition-all duration-200 focus:border-cyan-500/50 focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-cyan-500/30"
               />
               {searchQuery && (
                 <button
@@ -307,95 +388,20 @@ export default function AppLayout() {
 
               {searchOpen && searchQuery.trim() !== '' && searchResultsDropdown}
             </div>
-
-            {/* Quick Action Button & Dropdown */}
-            <div ref={quickRef} className="relative hidden sm:block">
-              <button
-                onClick={() => setQuickActionOpen((prev) => !prev)}
-                className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-500 active:scale-95 transition-all duration-150"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5]" />
-                <span>Quick Action</span>
-              </button>
-
-              {quickActionOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-slate-800 bg-[#0e1626]/95 p-1.5 shadow-2xl backdrop-blur-md z-50">
-                  <button
-                    onClick={() => {
-                      setQuickActionOpen(false);
-                      setModalType('shipment');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-100 hover:bg-slate-800/70 transition-colors"
-                  >
-                    <Package className="h-4 w-4 text-blue-400" />
-                    <span>New Shipment</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setQuickActionOpen(false);
-                      setModalType('vehicle');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-100 hover:bg-slate-800/70 transition-colors"
-                  >
-                    <Truck className="h-4 w-4 text-emerald-400" />
-                    <span>Add Vehicle</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setQuickActionOpen(false);
-                      setModalType('driver');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-100 hover:bg-slate-800/70 transition-colors"
-                  >
-                    <UserPlus className="h-4 w-4 text-amber-400" />
-                    <span>Add Driver</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <NotificationBell />
           </div>
+        </header>
+
+        {/* Quick Action Creation Modals */}
+        <ShipmentForm open={modalType === 'shipment'} onClose={() => setModalType(null)} />
+        <VehicleForm open={modalType === 'vehicle'} vehicle={null} onClose={() => setModalType(null)} />
+        <DriverForm open={modalType === 'driver'} driver={null} onClose={() => setModalType(null)} />
+
+        {/* Slide / Content Container */}
+        <div ref={contentRef} className="flex-1 min-h-0 overflow-auto">
+          <main className="mx-auto max-w-[1440px] px-4 py-6 lg:px-8"><Outlet /></main>
         </div>
-
-        {/* Mobile Search Bar Row (Shown on mobile screens < sm) */}
-        <div className="block sm:hidden border-t border-slate-800/60 px-4 py-2.5 bg-[#090e1b]">
-          <div ref={mobileSearchRef} className="relative flex items-center">
-            <Search className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onFocus={() => setSearchOpen(true)}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setSearchOpen(true);
-              }}
-              placeholder="Search for something"
-              className="w-full rounded-full border border-slate-800/90 bg-[#121929] py-2 pl-10 pr-8 text-sm font-normal text-slate-100 placeholder-slate-400/90 transition-all duration-200 focus:border-cyan-500/50 focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-cyan-500/30"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                className="absolute right-3 text-slate-400 hover:text-white"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-
-            {searchOpen && searchQuery.trim() !== '' && searchResultsDropdown}
-          </div>
-        </div>
-      </header>
-
-      {/* Quick Action Creation Modals */}
-      <ShipmentForm open={modalType === 'shipment'} onClose={() => setModalType(null)} />
-      <VehicleForm open={modalType === 'vehicle'} vehicle={null} onClose={() => setModalType(null)} />
-      <DriverForm open={modalType === 'driver'} driver={null} onClose={() => setModalType(null)} />
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-[1440px] px-4 py-6 lg:px-8"><Outlet /></main>
-      <Toaster />
+        <Toaster />
+      </div>
     </div>
   );
 }

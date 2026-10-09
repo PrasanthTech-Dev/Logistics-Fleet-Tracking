@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
   html {
     font-family: Barlow, system-ui, sans-serif;
     color-scheme: dark;
